@@ -1,0 +1,270 @@
+<!DOCTYPE html> 
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Birthday Card for Rudolf</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #ffafbd, #ffc3a0);
+      overflow: hidden;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .card {
+      width: 300px;
+      height: 200px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+      position: absolute;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.3rem;
+      font-weight: bold;
+      transition: transform 0.8s ease-in-out, left 0.5s, top 0.5s;
+      transform-style: preserve-3d;
+      z-index: 5;
+      cursor: grab;
+    }
+
+    .card.open {
+      transform: rotateY(180deg);
+    }
+
+    .front, .back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+    }
+
+    .front {
+      background: #ff6f91;
+      color: white;
+    }
+
+    .back {
+      background: #fff;
+      transform: rotateY(180deg);
+      flex-direction: column;
+      color: #333;
+    }
+
+    .back h1 {
+      margin: 10px 0;
+      font-size: 1.8rem;
+      color: #ff6f91;
+    }
+
+    .back p {
+      margin: 5px 0;
+      font-size: 1rem;
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .balloon {
+      position: absolute;
+      bottom: -150px;
+      width: 40px;
+      height: 60px;
+      border-radius: 50%;
+      opacity: 0.8;
+      animation: floatUp 8s linear forwards;
+    }
+
+    .balloon::after {
+      content: '';
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      width: 2px;
+      height: 50px;
+      background: black;
+      transform: translateX(-50%);
+    }
+
+    @keyframes floatUp {
+      0% { transform: translateY(0) scale(0.8); opacity: 1; }
+      80% { opacity: 1; }
+      100% { transform: translateY(-110vh) scale(1.2); opacity: 0; }
+    }
+
+    /* Shake effect */
+    @keyframes shake {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-10px); }
+      50% { transform: translateX(10px); }
+      75% { transform: translateX(-10px); }
+      100% { transform: translateX(0); }
+    }
+
+    .shake {
+      animation: shake 0.4s ease-in-out;
+    }
+  </style>
+</head>
+<body>
+  <div class="card" id="birthdayCard" style="top:200px; left:200px;">
+    <div class="front">🎁 Click to Open 🎁</div>
+    <div class="back">
+      <h1>Happy 25th Birthday Rudolf! 🎉</h1>
+      <p>Wishing you an amazing year ahead! 🥳</p>
+    </div>
+  </div>
+
+  <canvas id="confetti"></canvas>
+
+  <!-- Birthday tune -->
+  <audio id="birthdaySong">
+    <source src= "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    const card = document.getElementById("birthdayCard");
+    const canvas = document.getElementById("confetti");
+    const ctx = canvas.getContext("2d");
+    const audio = document.getElementById("birthdaySong");
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let confettiPieces = [];
+    let runAwayCount = 0; 
+    let isDragging = false;
+    let offsetX, offsetY;
+
+    class Confetti {
+      constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.size = Math.random() * 8 + 4;
+        this.color = color;
+        this.speedY = Math.random() * 4 + 2;
+        this.speedX = (Math.random() - 0.5) * 4;
+      }
+      update() {
+        this.y += this.speedY;
+        this.x += this.speedX;
+      }
+      draw() {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.size, this.size);
+      }
+    }
+
+    function generateConfetti() {
+      const colors = ["#ff6f91", "#ff9671", "#ffc75f", "#f9f871", "#6a67ce"];
+      for (let i = 0; i < 200; i++) {
+        confettiPieces.push(
+          new Confetti(
+            Math.random() * canvas.width,
+            Math.random() * canvas.height * 0.2,
+            colors[Math.floor(Math.random() * colors.length)]
+          )
+        );
+      }
+    }
+
+    function animateConfetti() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      confettiPieces.forEach((piece) => {
+        piece.update();
+        piece.draw();
+      });
+      confettiPieces = confettiPieces.filter(p => p.y < canvas.height);
+      if (confettiPieces.length > 0) {
+        requestAnimationFrame(animateConfetti);
+      }
+    }
+
+    function releaseBalloon() {
+      const balloon = document.createElement("div");
+      balloon.classList.add("balloon");
+      const colors = ["#ff6f91", "#6a67ce", "#ffc75f", "#ff9671", "#f9f871"];
+      balloon.style.background = colors[Math.floor(Math.random() * colors.length)];
+      balloon.style.left = Math.random() * 90 + "%";
+      document.body.appendChild(balloon);
+      setTimeout(() => balloon.remove(), 8000);
+    }
+
+    function startBalloons() {
+      setInterval(releaseBalloon, 1500);
+    }
+
+    // Flip only after 5 run-aways
+    card.addEventListener("click", (e) => {
+      if (runAwayCount < 5) return; 
+      card.classList.toggle("open");
+      generateConfetti();
+      animateConfetti();
+      startBalloons();
+      audio.play();
+    });
+
+    // Run away with shake
+    document.addEventListener("mousemove", (e) => {
+      const rect = card.getBoundingClientRect();
+      const distance = Math.hypot(
+        e.clientX - (rect.left + rect.width/2),
+        e.clientY - (rect.top + rect.height/2)
+      );
+      if (distance < 120 && runAwayCount < 5 && !card.classList.contains("shake")) {
+        card.classList.add("shake");
+        setTimeout(() => {
+          card.classList.remove("shake");
+          const newX = Math.random() * (window.innerWidth - rect.width);
+          const newY = Math.random() * (window.innerHeight - rect.height);
+          card.style.left = newX + "px";
+          card.style.top = newY + "px";
+          runAwayCount++;
+        }, 400); // after shake finishes
+      }
+    });
+
+    // Dragging
+    card.addEventListener("mousedown", (e) => {
+      isDragging = true;
+      card.style.cursor = "grabbing";
+      offsetX = e.clientX - card.offsetLeft;
+      offsetY = e.clientY - card.offsetTop;
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      if (isDragging) {
+        card.style.left = e.clientX - offsetX + "px";
+        card.style.top = e.clientY - offsetY + "px";
+      }
+    });
+
+    document.addEventListener("mouseup", () => {
+      isDragging = false;
+      card.style.cursor = "grab";
+    });
+
+    window.addEventListener("resize", () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+  </script>
+</body>
+</html>
